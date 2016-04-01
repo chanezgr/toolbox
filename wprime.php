@@ -18,19 +18,19 @@ $elapsedSec = 0;
 $ITAUlive = 0;
 $IFTAU = 0;
 $tot = 0;
+$W = $WPRIME;
 // Read source data file
 $f1 = fopen($argv[1], "r");
 // Put the content of file 1 in an array
 while (($line = fgets($f1)) !== false) {
-  $line = str_replace(array("\n", "\r", " "), "", $line);
+  $line = explode(";", $line);
+  $line = str_replace(array("\n", "\r", " "), "", $line[0]);
   $raw[] = $line;
-  
+
   $tot += $line;
   $avg[] = $tot/($elapsedSec+1);
-  
-  // END FIND MATCHES
-  
-  
+
+
   if ($line < $CP) {
     $totalBelowCP += $line;
     $countBelowCP++;
@@ -41,16 +41,16 @@ while (($line = fgets($f1)) !== false) {
   else {
     $TAUlive[$elapsedSec] = 546 * exp(-0.01*($CP)) + 316;
   }
-  
+
   if ($elapsedSec == 3600) {
     $TAUhr = $TAU[$elapsedSec];
   }
-  
+
   $value = $line;
   if ($value < 0) {
     $value = 0;
   }
-  
+
   if ($value > $CP) {
     $powerValue = $value - $CP;
   }
@@ -63,13 +63,23 @@ while (($line = fgets($f1)) !== false) {
   $output = exp(-$elapsedSec / $TAUlive[$elapsedSec]) * $ITAUlive;
   $value = $WPRIME - $output;
   $wprimebalTAUlive[] = $value;
-  
+
   // Wprime bal with fixed TAU
   $IFTAU += exp($elapsedSec / $FTAU) * $powerValue;
   $output = exp(-$elapsedSec / $FTAU) * $IFTAU;
   $value = $WPRIME - $output;
   $wprimebalFTAU[] = $value;
-  
+
+  // Wprime differential
+  if ($line < $CP) {
+    $W  = $W + ($CP-$line)*($WPRIME-$W)/$WPRIME;
+  }
+  else {
+    $W  = $W + ($CP-$line);
+  }
+  $differential[] = $W;
+
+
   $elapsedSec++;
 }
 
@@ -107,10 +117,10 @@ for ($i=0; $i<sizeof($raw); $i++) {
   $value = $WPRIME - $output;
   $wprimereal[] = $value;
 }
-echo "Sec;Power;W'bal live TAU;W'bal fixed TAU; W'bal real;PW Avg\n";
+echo "Sec;Power;W'bal live TAU;W'bal fixed TAU; W'bal real;W'Bal Differential;PW Avg\n";
 
 for ($i = 0; $i < sizeof($wprimereal); $i++) {
-  echo $i . ";" . $raw[$i] . ";" . $wprimebalTAUlive[$i] . ";" . $wprimebalFTAU[$i] . ";" . $wprimereal[$i] . ";" . $avg[$i] . "\n";
+  echo $i . ";" . $raw[$i] . ";" . $wprimebalTAUlive[$i] . ";" . $wprimebalFTAU[$i] . ";" . $wprimereal[$i] . ";" . $differential[$i] . ";" . $avg[$i] . "\n";
 }
 
 ?>
